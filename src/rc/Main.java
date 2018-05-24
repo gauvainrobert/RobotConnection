@@ -34,7 +34,7 @@ public class Main {
 			
 			
 			//positions.add(new Position(new Vertice("a2"), new Vertice("h3"), 270.f-15.f));
-			positions.add(new Position(new Vertice("a1"), new Vertice("b1"), 0.f));
+			positions.add(new Position(new Vertice("a2"), new Vertice("h3"), 0.f));
 			int index = 0;
 			for (NXTInfo nxt : nxts) {
 				connections.add(new Robot(nxt,positions.get(index),course));

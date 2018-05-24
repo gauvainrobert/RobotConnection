@@ -22,12 +22,14 @@ public class Robot implements Runnable {
 	private DataInputStream m_dis;
 	private DataOutputStream m_dos;
 	private final NXTInfo m_nxt;
-	private Position position ;
+	private Position position;
 	private Direction direction = null;
 	private Position target = null;
 	private Course course;
 	private int nbOfVictims = 0;
 	private Semaphore semOut = new Semaphore(1);
+	private Semaphore semIn = new Semaphore(1);
+	private boolean targetIsHospital = false;
 	
 	public Robot(NXTInfo _nxt, Position position, Course course) {
 		m_nxt = _nxt;
@@ -47,32 +49,36 @@ public class Robot implements Runnable {
 	
 	public List<Direction> nextDirection() {
 		List<Direction> dirs = null;
+		System.out.println("position robot :"+position);
 		if(target!=null) {
 			if(target.getFrom().equals(position.getFrom()) || target.getFrom().equals(position.getTo()) || 
 					target.getTo().equals(position.getFrom()) || target.getTo().equals(position.getTo())) {
-				
-				if(nbOfVictims<Constants.victims_capacity) {
-					nbOfVictims++;
-					System.out.println(nbOfVictims);
-					course.getVictims().remove(0);
-				}else {
-					nbOfVictims=0;
+				System.out.println("ok");
+				target=null;
+				if(targetIsHospital) {
+					targetIsHospital=false;
+					nbOfVictims = 0;
+					// envoyer nbOfVictims commandes de bip
 				}
+					
 			}
 		}
-		if(!course.getVictims().isEmpty()) {
-			if(nbOfVictims<Constants.victims_capacity) {
-				
+		if(target==null) {
+			if(nbOfVictims<Constants.victims_capacity && !course.getVictims().isEmpty()) {
 				target = course.getVictims().get(0);
-				System.out.println(target.toString());
-				dirs = course.getCourseForOneDestination(position, target);
+				course.getVictims().remove(0);
+				System.out.println("target :"+target);
+				
 			}else {
-				Vertice v = course.findHospital();
+				Vertice v = course.findHospital(position);
 				target = new Position(v,v.getPredecessor(),0);
-				dirs = course.getCourseForOneDestination(position, target);
+				System.out.println("target :"+target);
+				targetIsHospital = true;
 			}
-		
 		}
+		
+		if(target!=null)
+			dirs = course.getCourseForOneDestination(position, target);
 		
 		
 		return dirs;
@@ -110,9 +116,9 @@ public class Robot implements Runnable {
 			while (true) {
 				try {
 					type = m_dis.readUTF();
+					System.out.println(type);
 					if(type.equals("position")) {
 						updatePosition();
-						
 					} else if(type.equals("direction")) {
 						sendDirection();			
 					}
@@ -139,22 +145,25 @@ public class Robot implements Runnable {
 	}
 
 	private void sendDirection() throws IOException {
+		semOut.acquire();
 		List<Direction> dirs = nextDirection();
-		
 		System.out.println(dirs);
 		
-		semOut.acquire();
 		if(dirs!=null) {
-			m_dos.writeUTF(dirs.get(0).toString());
+			if(dirs.isEmpty())
+				m_dos.writeUTF("");
+			else
+				m_dos.writeUTF(dirs.get(0).toString());
 			m_dos.flush();
-			if(dirs.get(0)==Direction.HALF_TURN) {
+			if(!dirs.isEmpty() && dirs.get(0)==Direction.HALF_TURN) {
 				m_dos.writeUTF(dirs.get(1).toString());
 				m_dos.flush();
 				direction = dirs.get(1);
 			}else {
 				m_dos.writeUTF("");
 				m_dos.flush();
-				direction = dirs.get(0);
+				if(!dirs.isEmpty())
+					direction = dirs.get(0);
 			}
 		}else {
 			m_dos.writeUTF("");
@@ -166,7 +175,7 @@ public class Robot implements Runnable {
 	}
 
 	private void updatePosition() throws IOException {
-		Position position = new Position(new Vertice(""),new Vertice(""),0);
+		semIn.acquire();
 		String v1,v2;
 		float distanceFrom;
 		v1 = m_dis.readUTF();
@@ -183,13 +192,15 @@ public class Robot implements Runnable {
 		for (Iterator<Vertice> iterator = course.getVertices().iterator(); iterator.hasNext() && (from ==null || to == null);) {
 			Vertice v = iterator.next();
 			if(v.equals(position.getFrom())) {
-				position.setFrom(v);				
+				position.setFrom(v);
+				from = v;
 			}
 			if(v.equals(position.getTo())) {
-				position.setTo(v);				
+				position.setTo(v);
+				to = v;
 			}
 		}
-		
+		semIn.release();
 		
 	}
 

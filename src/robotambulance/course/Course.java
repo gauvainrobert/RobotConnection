@@ -36,15 +36,16 @@ public class Course {
 	}
 
 	
-	public Vertice findHospital() {
-	Vertice h = null;
-	
-	for (Iterator<Position> iterator = hospitals.iterator(); iterator.hasNext();) {
-		Position position = iterator.next();
-		if(h==null || position.getFrom().getWeight()<h.getWeight())
-			h=position.getFrom();
-		if(h==null || position.getTo().getWeight()<h.getWeight())
-			h=position.getTo();
+	public Vertice findHospital(Position origin) {
+		initDijkstra(vertices,origin.getTo());
+		Vertice h = null;
+		
+		for (Iterator<Position> iterator = hospitals.iterator(); iterator.hasNext();) {
+			Position position = iterator.next();
+			if(h==null || position.getFrom().getWeight()<h.getWeight())
+				h=position.getFrom();
+			if(h==null || position.getTo().getWeight()<h.getWeight())
+				h=position.getTo();
 		
 	}
 	
