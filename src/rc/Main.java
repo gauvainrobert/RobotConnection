@@ -20,8 +20,12 @@ public class Main {
 
 			NXTInfo[] nxts = {
 
-					new NXTInfo(NXTCommFactory.BLUETOOTH, "Gurren Lagann",
-							"00165318EB71"),
+//					new NXTInfo(NXTCommFactory.BLUETOOTH, "Gurren Lagann",
+//							"00165318EB71"),
+					new NXTInfo(NXTCommFactory.BLUETOOTH, "Hydra",
+							"0016531C24E7"),
+					new NXTInfo(NXTCommFactory.BLUETOOTH, "NXT",
+					"0016531C15FC"),
 
 					 };
 
@@ -35,9 +39,10 @@ public class Main {
 			
 			//positions.add(new Position(new Vertice("a2"), new Vertice("h3"), 270.f-15.f));
 			positions.add(new Position(new Vertice("a2"), new Vertice("h3"), 0.f));
+			positions.add(new Position(new Vertice("f2"), new Vertice("d3"), 0.f));
 			int index = 0;
 			for (NXTInfo nxt : nxts) {
-				connections.add(new Robot(nxt,positions.get(index),course));
+				connections.add(new Robot(nxt,connections,positions.get(index),course,index));
 				index++;
 			}
 

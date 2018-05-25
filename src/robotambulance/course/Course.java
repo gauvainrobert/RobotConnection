@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import robotambulance.util.Constants;
 import robotambulance.util.Direction;
 
 public class Course {
@@ -11,6 +12,7 @@ public class Course {
 	private List<Road> roads;
 	private List<Position> victims;
 	private List<Position> hospitals;
+	private Position goOut;
 	
 	public List<Position> getVictims() {
 		return victims;
@@ -20,12 +22,13 @@ public class Course {
 		return hospitals;
 	}
 
-	public Course(List<Vertice> vertices, List<Road> roads, List<Position> victims, List<Position> hospitals) {
+	public Course(List<Vertice> vertices, List<Road> roads, List<Position> victims, List<Position> hospitals, Position goOut) {
 		super();
 		this.vertices = vertices;
 		this.roads = roads;
 		this.victims = victims;
 		this.hospitals = hospitals;
+		this.goOut = goOut;
 	}
 	
 	public List<Vertice> getVertices() {
@@ -36,9 +39,19 @@ public class Course {
 	}
 
 	
-	public Vertice findHospital(Position origin) {
-		initDijkstra(vertices,origin.getTo());
+	
+	
+	public Position getGoOut() {
+		return goOut;
+	}
+
+	public void setGoOut(Position goOut) {
+		this.goOut = goOut;
+	}
+
+	public Vertice findHospital(Position origin, List<Position> positionsToAvoid) {
 		Vertice h = null;
+		djikstra(origin,positionsToAvoid);
 		
 		for (Iterator<Position> iterator = hospitals.iterator(); iterator.hasNext();) {
 			Position position = iterator.next();
@@ -46,15 +59,39 @@ public class Course {
 				h=position.getFrom();
 			if(h==null || position.getTo().getWeight()<h.getWeight())
 				h=position.getTo();
+			
+		}
 		
+		return h;
 	}
 	
-	return h;
-}
+	public Vertice findVictim(Position origin, List<Position> positionsToAvoid) {
+		Vertice h = null;
+		djikstra(origin,positionsToAvoid);
+		
+		for (Iterator<Position> iterator = victims.iterator(); iterator.hasNext();) {
+			Position position = iterator.next();
+			if(h==null || position.getFrom().getWeight()<h.getWeight())
+				h=position.getFrom();
+			if(h==null || position.getTo().getWeight()<h.getWeight())
+				h=position.getTo();
+		}
+		return h;
+	}
+	
+	
 	
 
-	public static float getDistance(List<Road> roads, Vertice from, Vertice to) {
+	public static float getDistance(List<Road> roads, Vertice from, Vertice to, List<Position> positionsToAvoid) {
 		float distance=0.f;
+		if(positionsToAvoid!=null)
+			for (Iterator<Position> iterator = positionsToAvoid.iterator(); iterator.hasNext();) {
+				Position position = iterator.next();
+				if(position.getFrom().equals(from) || position.getTo().equals(to))
+					return Constants.avoidRoad;
+				
+			}
+		
 		for (Iterator<Road> iterator = roads.iterator(); iterator.hasNext();) {
 			Road road = iterator.next();
 			if((road.getFrom().equals(from) && road.getTo().equals(to)) || (road.getFrom().equals(to) && road.getTo().equals(from))) {
@@ -91,8 +128,8 @@ public class Course {
 		return position;
 	}
 	
-	private static void updateDistance(List<Road> roads, Vertice v, Vertice n) {
-		float w = Course.getDistance(roads, v, n);
+	private static void updateDistance(List<Road> roads, Vertice v, Vertice n, List<Position> positionsToAvoid) {
+		float w = Course.getDistance(roads, v, n, positionsToAvoid);
 		if(n.getWeight() > v.getWeight() + w) {
 			n.setWeight(v.getWeight() + w);
 			n.setPredecessor(v);
@@ -135,22 +172,9 @@ public class Course {
 		
 	}
 	
-	public List<Direction> getCourseForOneDestination(Position position, Position destination){
+	public List<Direction> getCourseForOneDestination(Position position, Position destination,  List<Position> positionsToAvoid){
 		
-		initDijkstra(vertices,position.getTo());
-		List<Vertice> Q = new ArrayList<>();
-		Q.addAll(vertices);
-		List<Vertice> neighbours;
-		List<Direction> directions = new ArrayList<>();
-		while(!Q.isEmpty()) {
-			Vertice v = findMin(Q);
-			Q.remove(v);
-			neighbours = v.getNeighbours();
-			for (Iterator<Vertice> iterator = neighbours.iterator(); iterator.hasNext();) {
-				Vertice n = iterator.next();
-				updateDistance(roads,v,n);
-			}
-		}
+		List<Direction> directions = djikstra(position, positionsToAvoid);
 		
 //		Vertice origin;
 		Vertice to = destination.getTo();
@@ -182,6 +206,24 @@ public class Course {
 		
 		return directions;
 		
+	}
+
+	private List<Direction> djikstra(Position position, List<Position> positionsToAvoid) {
+		initDijkstra(vertices,position.getTo());
+		List<Vertice> Q = new ArrayList<>();
+		Q.addAll(vertices);
+		List<Vertice> neighbours;
+		List<Direction> directions = new ArrayList<>();
+		while(!Q.isEmpty()) {
+			Vertice v = findMin(Q);
+			Q.remove(v);
+			neighbours = v.getNeighbours();
+			for (Iterator<Vertice> iterator = neighbours.iterator(); iterator.hasNext();) {
+				Vertice n = iterator.next();
+				updateDistance(roads,v,n,positionsToAvoid);
+			}
+		}
+		return directions;
 	}
 
 	public static Course compet1() {
@@ -422,13 +464,15 @@ public class Course {
 		Position victim2 = new Position(f3,h2,0.f);
 		Position victim3 = new Position(d2,e2,0.f);
 		
+		Position goOut = new Position(a1,b1,0.f);
+		
 		List<Position> victims = new ArrayList<>();
 		victims.add(victim3);
 		victims.add(victim2);
 		victims.add(victim1);
 		
 		
-		return new Course(vertices,roads, victims, hospitals);
+		return new Course(vertices,roads, victims, hospitals,goOut);
 		
 	}
 	
@@ -686,13 +730,14 @@ public class Course {
 		victims.add(victim1);
 		victims.add(victim2);
 		
+		Position goOut = new Position(a1,b1,0.f);
 		
-		return new Course(vertices,roads, victims, hospitals);
+		return new Course(vertices,roads, victims, hospitals,goOut);
 		
 	}
 
 	public void inversePosition(Position position) {
-		float newDistance = Course.getDistance(getRoads(),position.getFrom(),position.getTo())-position.getDistanceFrom();
+		float newDistance = Course.getDistance(getRoads(),position.getFrom(),position.getTo(),null)-position.getDistanceFrom();
 		position.setDistanceFrom(newDistance);
 		Vertice from = position.getFrom();
 		Vertice to = position.getTo();

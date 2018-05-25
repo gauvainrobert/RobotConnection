@@ -4,6 +4,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
@@ -30,12 +31,31 @@ public class Robot implements Runnable {
 	private Semaphore semOut = new Semaphore(1);
 	private Semaphore semIn = new Semaphore(1);
 	private boolean targetIsHospital = false;
+	private int indexRobot;
+	private List<Robot> robots;
+	private boolean finish = false;
 	
-	public Robot(NXTInfo _nxt, Position position, Course course) {
+	public Robot(NXTInfo _nxt, List<Robot> robots, Position position, Course course, int indexRobot) {
 		m_nxt = _nxt;
-		this.position = position;
 		this.course=course;
+		this.indexRobot = indexRobot;
+		this.position = position;
+		this.robots = robots;
 	}
+
+	
+	
+	public boolean isFinish() {
+		return finish;
+	}
+
+
+
+	public void setFinish(boolean finish) {
+		this.finish = finish;
+	}
+
+
 
 	public Position getPosition() {
 		return position;
@@ -47,8 +67,22 @@ public class Robot implements Runnable {
 		return direction;
 	}
 	
+	public List<Position> getPositionsToAvoid(){
+		List<Position> positionsToAvoid = new ArrayList<>();
+		int i=0;
+		for (Iterator<Robot> iterator = robots.iterator(); iterator.hasNext();) {
+			Robot r = iterator.next();
+			i++;
+			if(i!=indexRobot && !r.isFinish()) {
+				positionsToAvoid.add(r.getPosition());
+			}
+		}
+		return positionsToAvoid;
+	}
+	
 	public List<Direction> nextDirection() {
 		List<Direction> dirs = null;
+		boolean goOut = false;
 		System.out.println("position robot :"+position);
 		if(target!=null) {
 			if(target.getFrom().equals(position.getFrom()) || target.getFrom().equals(position.getTo()) || 
@@ -59,26 +93,41 @@ public class Robot implements Runnable {
 					targetIsHospital=false;
 					nbOfVictims = 0;
 					// envoyer nbOfVictims commandes de bip
+				}else if(!goOut){
+					// on vient de recuperer une victime
+					nbOfVictims++;
 				}
 					
 			}
 		}
 		if(target==null) {
 			if(nbOfVictims<Constants.victims_capacity && !course.getVictims().isEmpty()) {
-				target = course.getVictims().get(0);
-				course.getVictims().remove(0);
+				Vertice v = course.findVictim(position, getPositionsToAvoid());
+				target = new Position(v,v.getBackwardNeighbour(),0);
+				course.getVictims().remove(target);
 				System.out.println("target :"+target);
 				
-			}else {
-				Vertice v = course.findHospital(position);
-				target = new Position(v,v.getPredecessor(),0);
+			}else if(course.getVictims().isEmpty() && nbOfVictims==0){
+				target=course.getGoOut();
+				goOut=true;
+			}else if(nbOfVictims>0){
+				Vertice h = course.findHospital(position, getPositionsToAvoid());
+				target = new Position(h,h.getBackwardNeighbour(),0);
 				System.out.println("target :"+target);
 				targetIsHospital = true;
 			}
 		}
 		
+		
 		if(target!=null)
-			dirs = course.getCourseForOneDestination(position, target);
+			dirs = course.getCourseForOneDestination(position, target, getPositionsToAvoid());
+		else
+			finish = true;
+		
+		
+		
+			
+			
 		
 		
 		return dirs;
