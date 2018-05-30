@@ -6,6 +6,7 @@ import java.util.List;
 
 import robotambulance.util.Constants;
 import robotambulance.util.Direction;
+import robotambulance.util.Semaphore;
 
 public class Course {
 	private List<Vertice> vertices;
@@ -84,18 +85,21 @@ public class Course {
 
 	public static float getDistance(List<Road> roads, Vertice from, Vertice to, List<Position> positionsToAvoid) {
 		float distance=0.f;
+		boolean find = false;
 		if(positionsToAvoid!=null)
-			for (Iterator<Position> iterator = positionsToAvoid.iterator(); iterator.hasNext();) {
+			for (Iterator<Position> iterator = positionsToAvoid.iterator(); iterator.hasNext() && !find;) {
 				Position position = iterator.next();
-				if(position.getFrom().equals(from) || position.getTo().equals(to))
-					return Constants.avoidRoad;
-				
+				if(position.getTo().equals(to) || position.getTo().getBackwardNeighbour().equals(to)) {
+					distance+=Constants.avoidRoad;
+					find=true;
+				}
 			}
-		
-		for (Iterator<Road> iterator = roads.iterator(); iterator.hasNext();) {
+		find=false;
+		for (Iterator<Road> iterator = roads.iterator(); iterator.hasNext() && !find;) {
 			Road road = iterator.next();
 			if((road.getFrom().equals(from) && road.getTo().equals(to)) || (road.getFrom().equals(to) && road.getTo().equals(from))) {
-				return road.getWeight();				
+				find=true;
+				distance+=road.getWeight();				
 			}
 		}
 		return distance;
@@ -104,30 +108,32 @@ public class Course {
 
 	public Position findPosition(Direction side, Vertice from, boolean intersection) {
 		Position position = null;
+		Vertice f = findFrom(from);
 		if(intersection) {
 			if(side==Direction.LEFT) {
-				position = new Position(from,from.getLeftNeighbour(),0.f);
+				position = new Position(f,f.getLeftNeighbour(),0.f);
 			}else {
-				position = new Position(from,from.getRightNeighbour(),0.f);			
+				position = new Position(f,f.getRightNeighbour(),0.f);			
 			}
 		}else {
-			for (Iterator<Road> iterator = roads.iterator(); iterator.hasNext();) {
-				Road road = iterator.next();
-				Vertice v=null;
-				if(road.getFrom().equals(from))
-					v=road.getTo();
-				else if(road.getTo().equals(from))
-					v=road.getFrom();
-				
-				if(v!=null && !v.equals(from.getLeftNeighbour()) && !v.equals(from.getRightNeighbour())) {
-					return new Position(from,v,0.f);					
-				}
-				
-			}
+			if(f!=null)
+				return new Position(f,f.getBackwardNeighbour(),0.f);
 		}
 		return position;
 	}
 	
+	private Vertice findFrom(Vertice from) {
+		for (Iterator<Road> iterator = roads.iterator(); iterator.hasNext();) {
+			Road road = iterator.next();
+			
+			if(road.getFrom().equals(from))
+				return road.getFrom();
+			else if(road.getTo().equals(from))
+				return road.getTo();		
+		}
+		return null;
+	}
+
 	private static void updateDistance(List<Road> roads, Vertice v, Vertice n, List<Position> positionsToAvoid) {
 		float w = Course.getDistance(roads, v, n, positionsToAvoid);
 		if(n.getWeight() > v.getWeight() + w) {
@@ -173,8 +179,8 @@ public class Course {
 	}
 	
 	public List<Direction> getCourseForOneDestination(Position position, Position destination,  List<Position> positionsToAvoid){
-		
-		List<Direction> directions = djikstra(position, positionsToAvoid);
+		List<Direction> directions = new ArrayList<>();
+		djikstra(position, positionsToAvoid);
 		
 //		Vertice origin;
 		Vertice to = destination.getTo();
@@ -208,12 +214,11 @@ public class Course {
 		
 	}
 
-	private List<Direction> djikstra(Position position, List<Position> positionsToAvoid) {
+	private void djikstra(Position position, List<Position> positionsToAvoid) {
 		initDijkstra(vertices,position.getTo());
 		List<Vertice> Q = new ArrayList<>();
 		Q.addAll(vertices);
 		List<Vertice> neighbours;
-		List<Direction> directions = new ArrayList<>();
 		while(!Q.isEmpty()) {
 			Vertice v = findMin(Q);
 			Q.remove(v);
@@ -223,7 +228,7 @@ public class Course {
 				updateDistance(roads,v,n,positionsToAvoid);
 			}
 		}
-		return directions;
+		
 	}
 
 	public static Course compet1() {
@@ -718,17 +723,28 @@ public class Course {
 		roads.add(e2h1);
 		roads.add(a2h3);
 			
-		Position hospital1 = new Position(b2,c2,0.f);
+		Position hospital1 = new Position(f3,g2,0.f);
+		Position hospital2 = new Position(g3,h2,0.f);
+		Position hospital3 = new Position(a1,b1,0.f);
 		
 		List<Position> hospitals = new ArrayList<>();
 		hospitals.add(hospital1);
+		hospitals.add(hospital2);
+		hospitals.add(hospital3);
 		
-		Position victim1 = new Position(e2,h1,0.f);
-		Position victim2 = new Position(a1,b1,0.f);
+		Position victim1 = new Position(e3,g1,0.f);
+		Position victim2 = new Position(e1,c3,0.f);
+		Position victim3 = new Position(c1,a3,0.f);
+		Position victim4 = new Position(b3,d1,0.f);
+		Position victim5 = new Position(a2,h3,0.f);
 		
 		List<Position> victims = new ArrayList<>();
 		victims.add(victim1);
 		victims.add(victim2);
+		victims.add(victim3);
+		victims.add(victim4);
+		victims.add(victim5);
+		
 		
 		Position goOut = new Position(a1,b1,0.f);
 		

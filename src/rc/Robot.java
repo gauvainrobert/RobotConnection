@@ -39,7 +39,7 @@ public class Robot implements Runnable {
 		m_nxt = _nxt;
 		this.course=course;
 		this.indexRobot = indexRobot;
-		this.position = position;
+		this.position = course.findPosition(null,position.getFrom(),false);
 		this.robots = robots;
 	}
 
@@ -123,8 +123,6 @@ public class Robot implements Runnable {
 			dirs = course.getCourseForOneDestination(position, target, getPositionsToAvoid());
 		else
 			finish = true;
-		
-		
 		
 			
 			

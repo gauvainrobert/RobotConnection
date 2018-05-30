@@ -26,23 +26,22 @@ public class Main {
 							"0016531C24E7"),
 					new NXTInfo(NXTCommFactory.BLUETOOTH, "NXT",
 					"0016531C15FC"),
-
 					 };
 
 			ArrayList<Robot> connections = new ArrayList<>(
 					nxts.length);
 
-			Course course = Course.compet2();
+			
 			
 			List<Position> positions = new ArrayList<>();
 			
 			
 			//positions.add(new Position(new Vertice("a2"), new Vertice("h3"), 270.f-15.f));
-			positions.add(new Position(new Vertice("a2"), new Vertice("h3"), 0.f));
+			positions.add(new Position(new Vertice("b2"), new Vertice("c2"), 0.f));
 			positions.add(new Position(new Vertice("f2"), new Vertice("d3"), 0.f));
 			int index = 0;
 			for (NXTInfo nxt : nxts) {
-				connections.add(new Robot(nxt,connections,positions.get(index),course,index));
+				connections.add(new Robot(nxt,connections,positions.get(index),Course.compet2(),index));
 				index++;
 			}
 
